@@ -69,7 +69,7 @@ void Network::update() {
 
 void Network::backtrack() {
 
-	for (size_t l = layers.size() - 2; l >= 0; l--) {
+	for (int l = layers.size() - 2; l >= 0; l--) {
 		vector<Neuron>& layer = layers[l];; // local input layer
 		Synapses& synapse = synapses[l];
 		vector<Neuron>& nextLayer = layers[l + 1]; // local output layer

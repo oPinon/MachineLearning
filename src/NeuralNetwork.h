@@ -29,8 +29,8 @@ class Network
 		vector<double> gradient; // delta to add to the coefficient for the next step
 
 	public:
-		double get(int input, int output) { return coefficients[output * inputLayer + input]; } // get coefficient
-		void set(int input, int output, double value) { coefficients[output * inputLayer + input] = value; } // set coefficient
+		inline double get(int input, int output) const { return coefficients[output * inputLayer + input]; } // get coefficient
+		inline void set(int input, int output, double value) { coefficients[output * inputLayer + input] = value; } // set coefficient
 		void addDiff(int input, int output, double value) { gradient[output * inputLayer + input] += value; }
 
 		Synapses(int input, int output);
