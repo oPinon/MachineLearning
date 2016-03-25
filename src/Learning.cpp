@@ -1,8 +1,8 @@
 #include "Learning.h"
 
-void NetLearner::learn(const std::vector<Sample>& samples) {
+void NetLearner::learn(const std::vector<Sample>& samples, int iterations, int miniBatch) {
 
-	for (int i = 0; i < 1; i++) { // TODO : stop criterion
+	for (int i = 0; i < iterations; i++) { // TODO : stop criterion
 		int count = 0;
 		double error = 0;
 		for (const Sample& s : samples) {
@@ -16,7 +16,7 @@ void NetLearner::learn(const std::vector<Sample>& samples) {
 			}
 			net.setDesiredOutput(s.output.data());
 			net.backtrack();
-			if (count > 0) { // minibatch
+			if (count > miniBatch) { // minibatch
 				count = 0;
 				net.update();
 			}
@@ -33,7 +33,7 @@ std::vector<double> NetLearner::apply(const std::vector<double>& input) {
 	return net.getOuput();
 }
 
-void NearestNeighbor::learn(const std::vector<Sample>& samples) {
+/*void NearestNeighbor::learn(const std::vector<Sample>& samples) {
 
 	this->samples.insert(this->samples.end(),samples.begin(), samples.end());
 }
@@ -101,4 +101,4 @@ std::vector<double> KNearestNeighbors::apply(const std::vector<double>& input) {
 	}
 	for (double& d : dst) { d /= nbFound; }
 	return dst;
-}
+}*/

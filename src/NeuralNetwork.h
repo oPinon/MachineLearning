@@ -20,7 +20,7 @@ class Network
 	// connections between several neural layers
 	struct Synapses
 	{
-		const double learningRate = 1;
+		const double learningRate = 1; // TODO : change it
 
 		int inputLayer; // nb of neurons in the input layer
 		int outputLayer; // nb of neurons in the output layer
@@ -50,4 +50,6 @@ public:
 	vector<double> getOuput();
 	void update();
 	void backtrack();
+	void exportToFile(const std::string& fileName) const; // TODO
+	static Network importFromFile(const std::string& fileName); // TODO
 };

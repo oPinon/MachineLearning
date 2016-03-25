@@ -22,7 +22,8 @@ class NetLearner : Learner {
 public:
 	Network net; // TODO : private
 	NetLearner(Network net) : net(net) {};
-	void learn(const std::vector<Sample>& samples);
+	void learn(const std::vector<Sample>& samples, int iterations, int miniBatch = 0);
+	void learn(const std::vector<Sample>& samples) { learn(samples, 1); }; // HACK ?
 	std::vector<double> apply(const std::vector<double>& input); // TODO : make it const
 };
 
