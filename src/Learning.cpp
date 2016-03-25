@@ -2,12 +2,18 @@
 
 void NetLearner::learn(const std::vector<Sample>& samples) {
 
-	for (int i = 0; i < 1000; i++) { // TODO : stop criterion
+	for (int i = 0; i < 1; i++) { // TODO : stop criterion
 		int count = 0;
+		double error = 0;
 		for (const Sample& s : samples) {
 
 			net.setInput(s.input.data());
 			net.activate();
+			auto output = net.getOuput();
+			for (int i = 0; i < output.size(); i++) {
+				double diff = output[i] - s.output[i];
+				error += diff*diff;
+			}
 			net.setDesiredOutput(s.output.data());
 			net.backtrack();
 			if (count > 0) { // minibatch

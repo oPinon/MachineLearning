@@ -4,7 +4,8 @@ Network::Synapses::Synapses(int input, int output) : inputLayer(input), outputLa
 
 	coefficients = vector<double>(input*output);
 	gradient = vector<double>(input*output, 0);
-	for (int i = 0; i < coefficients.size(); i++) { coefficients[i] = 1 - 2 * ((double)rand()) / RAND_MAX; }
+	// TODO : values of the initial coefficients
+	for (int i = 0; i < coefficients.size(); i++) { coefficients[i] = 0.1*(1 - 2 * ((double)rand()) / RAND_MAX); }
 }
 
 Network::Network(vector<int> layerSizes) : layers(), synapses() {

@@ -19,8 +19,8 @@ public:
 
 class NetLearner : Learner {
 
-	Network net;
 public:
+	Network net; // TODO : private
 	NetLearner(Network net) : net(net) {};
 	void learn(const std::vector<Sample>& samples);
 	std::vector<double> apply(const std::vector<double>& input); // TODO : make it const

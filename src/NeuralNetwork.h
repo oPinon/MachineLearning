@@ -7,8 +7,8 @@ using namespace std;
 
 class Network
 {
-	static double sigmoid(double x) { return 1 / (1 + exp(-x)); }
-	static double sigmoidDeriv(double x) { return sigmoid(x) * (1 - sigmoid(x)); } // TODO : optimize
+	inline double sigmoid(double x) { return 1 / (1 + exp(-x)); }
+	inline double sigmoidDeriv(double x) { return sigmoid(x) * (1 - sigmoid(x)); } // TODO : optimize
 
 	struct Neuron
 	{
@@ -20,11 +20,11 @@ class Network
 	// connections between several neural layers
 	struct Synapses
 	{
-		const double learningRate = 0.1;
+		const double learningRate = 1;
 
 		int inputLayer; // nb of neurons in the input layer
 		int outputLayer; // nb of neurons in the output layer
-	private:
+	//private: TODO
 		vector<double> coefficients; // coefficients of each connection
 		vector<double> gradient; // delta to add to the coefficient for the next step
 
