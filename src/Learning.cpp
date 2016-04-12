@@ -16,7 +16,7 @@ void NetLearner::learn(const std::vector<Sample>& samples, int iterations, int m
 			}
 			net.setDesiredOutput(s.output.data());
 			net.backtrack();
-			if (count > miniBatch) { // minibatch
+			if (count > miniBatch && miniBatch >= 0) { // minibatch
 				count = 0;
 				net.update();
 			}

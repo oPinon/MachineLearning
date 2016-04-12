@@ -1,21 +1,20 @@
 #include "NeuralNetwork.h"
 
-Network::Synapses::Synapses(int input, int output) : inputLayer(input), outputLayer(output) {
+Network::Synapses::Synapses(int input, int output, double initCoeff) : inputLayer(input), outputLayer(output) {
 
 	coefficients = vector<double>(input*output);
 	gradient = vector<double>(input*output, 0);
-	// TODO : values of the initial coefficients
-	for (int i = 0; i < coefficients.size(); i++) { coefficients[i] = 0.1*(1 - 2 * ((double)rand()) / RAND_MAX); }
+	for (int i = 0; i < coefficients.size(); i++) { coefficients[i] = initCoeff*(1 - 2 * double(rand()) / RAND_MAX); }
 }
 
-Network::Network(vector<int> layerSizes) : layers(), synapses() {
+Network::Network(vector<int> layerSizes, double initCoeffs) : layers(), synapses() {
 
 	for (int i = 0; i < layerSizes.size(); i++) {
 		vector<Neuron> layer = vector<Neuron>(layerSizes[i] + 1);
 		layer[layer.size() - 1].value = -1; // the bias neuron has a constant value of -1
 		if (i < layerSizes.size() - 1) {  // for every layer but the last :
 
-			Synapses s = Synapses(layerSizes[i] + 1, layerSizes[i + 1]);  // don't forget the bias in the input layer !
+			Synapses s = Synapses(layerSizes[i] + 1, layerSizes[i + 1], initCoeffs);  // don't forget the bias in the input layer !
 			synapses.push_back(s);
 		}
 		layers.push_back(layer);
@@ -63,9 +62,9 @@ vector<double> Network::getOuput() {
 	return dst;
 }
 
-void Network::update() {
+void Network::update(double learningRate) {
 
-	for (auto& s : synapses) { s.updateCoeffs(); }
+	for (auto& s : synapses) { s.updateCoeffs(learningRate); }
 }
 
 void Network::backtrack() {
