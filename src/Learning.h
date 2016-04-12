@@ -22,10 +22,11 @@ class NetLearner : Learner {
 public:
 	Network net; // TODO : private
 	NetLearner(Network net) : net(net) {};
-	void learn(
+	double learn( // returns the error of the model on all samples
 		const std::vector<Sample>& samples,
 		int iterations,
-		int miniBatch = -1 // set to -1 to disable minibatches
+		int miniBatch = -1, // set to -1 to disable minibatches
+		double learningRate = 0.01
 	);
 	void learn(const std::vector<Sample>& samples) { learn(samples, 1); }; // HACK ?
 	std::vector<double> apply(const std::vector<double>& input); // TODO : make it const

@@ -1,10 +1,11 @@
 #include "Learning.h"
 
-void NetLearner::learn(const std::vector<Sample>& samples, int iterations, int miniBatch) {
+double NetLearner::learn(const std::vector<Sample>& samples, int iterations, int miniBatch, double learningRate) {
 
+	double error;
 	for (int i = 0; i < iterations; i++) { // TODO : stop criterion
 		int count = 0;
-		double error = 0;
+		error = 0;
 		for (const Sample& s : samples) {
 
 			net.setInput(s.input.data());
@@ -12,18 +13,19 @@ void NetLearner::learn(const std::vector<Sample>& samples, int iterations, int m
 			auto output = net.getOuput();
 			for (int i = 0; i < output.size(); i++) {
 				double diff = output[i] - s.output[i];
-				error += diff*diff;
+				error += abs(diff); // squared or abs ?
 			}
 			net.setDesiredOutput(s.output.data());
 			net.backtrack();
-			if (count > miniBatch && miniBatch >= 0) { // minibatch
+			if (count >= miniBatch && miniBatch >= 0) { // minibatch
 				count = 0;
-				net.update();
+				net.update(learningRate);
 			}
 			count++;
 		}
-		net.update();
+		net.update(learningRate);
 	}
+	return error / samples.size();
 }
 
 std::vector<double> NetLearner::apply(const std::vector<double>& input) {

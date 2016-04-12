@@ -51,7 +51,7 @@ public:
 	void activate();
 	void setDesiredOutput(const double* values);
 	vector<double> getOuput();
-	void update(double learningRate = 0.01);
+	void update(double learningRate);
 	void backtrack();
 	void exportToFile(const std::string& fileName) const; // TODO
 	static Network importFromFile(const std::string& fileName); // TODO
