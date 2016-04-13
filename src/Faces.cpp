@@ -3,69 +3,96 @@
 #include <fstream>
 #include <assert.h>
 
-struct FaceDetector {
-
-	int w = 32, h = 32;
-
-};
-
 void faceTest(std::string folder) {
-
-	// reading the list of face images
-	std::string fileListPath = folder + "list.txt";
-	std::fstream fileList(fileListPath, std::ios::in);
-	if (!fileList.is_open()) {
-		std::cerr << "can't open the list of faces : "
-			<< fileListPath << std::endl;
-		return;
-	}
-
-	// reading all the images
-	std::vector<cv::Mat> images;
-	{
-		std::string line;
-		while (std::getline(fileList, line)) {
-			//std::cout << line << std::endl;
-			cv::Mat im = cv::imread(folder + line);
-			if (im.empty()) { continue; }
-			images.push_back(im);
-		}
-		fileList.close();
-	}
-
-	// assuming that the first image has the correct size
-	int w = images[0].size().width, h = images[0].size().height;
-
-	// filtering images that have the wrong size
-	{
-		std::vector<cv::Mat> filteredImages;
-		for (cv::Mat& im : images) {
-			if (im.size().width == w && im.size().height == h) {
-				filteredImages.push_back(im);
-			}
-		}
-		images = filteredImages;
-		std::cout << "found " << images.size()
-			<< " face images" << std::endl;
-	}
 
 	// converting the image to samples
 	std::vector<Sample> samples;
-	w = 32; h = 32;
-	for (cv::Mat& im : images) {
-		cv::resize(im, im, cv::Size(w, h), 0, 0, cv::INTER_AREA);
-		assert(im.depth() == CV_8U); // im must be uint8
-		Sample s;
-		for (int i = 0; i < w*h; i++) {
-			s.input.push_back(double(im.data[i*im.channels()]) / 255);
+	int w = 32, h = 32;
+
+	// compiling all images to binary, for faster reading
+	std::fstream binImages(folder + "allImages", std::ios::in | std::ios::binary);
+	if (!binImages.is_open()) {
+
+		// reading the list of face images
+		std::string fileListPath = folder + "list.txt";
+		std::fstream fileList(fileListPath, std::ios::in);
+		if (!fileList.is_open()) {
+			std::cerr << "can't open the list of faces : "
+				<< fileListPath << std::endl;
+			return;
 		}
-		s.output = s.input;
-		samples.push_back(s);
+
+		// reading all the images
+		std::vector<cv::Mat> images;
+		{
+			std::string line;
+			while (std::getline(fileList, line)) {
+				std::cout << line << std::endl;
+				cv::Mat im = cv::imread(folder + line);
+				if (im.empty()) { continue; }
+				images.push_back(im);
+			}
+			fileList.close();
+		}
+
+		// assuming that the first image has the correct size
+		int w0 = images[0].size().width, h0 = images[0].size().height;
+
+		// filtering images that have the wrong size
+		{
+			std::vector<cv::Mat> filteredImages;
+			for (cv::Mat& im : images) {
+				if (im.size().width == w0 && im.size().height == h0) {
+					filteredImages.push_back(im);
+				}
+			}
+			images = filteredImages;
+			std::cout << "found " << images.size()
+				<< " face images" << std::endl;
+		}
+
+		for (cv::Mat& im : images) {
+			cv::resize(im, im, cv::Size(w, h), 0, 0, cv::INTER_AREA);
+			assert(im.depth() == CV_8U); // im must be uint8
+			Sample s;
+			for (int i = 0; i < w*h; i++) {
+				s.input.push_back(double(im.data[i*im.channels()]) / 255);
+			}
+			s.output = s.input;
+			samples.push_back(s);
+		}
+
+		// exporting the samples to a binary file
+		binImages = std::fstream(folder + "allImages", std::ios::out | std::ios::binary);
+		if (binImages.is_open()) {
+			int size = samples.size();
+			binImages.write((char*)&size, sizeof(int));
+			for (Sample& s : samples) {
+				std::vector<unsigned char> inputC(w*h);
+				for (int i = 0; i < s.input.size(); i++) { inputC[i] = 255 * s.input[i]; }
+				binImages.write((char*)inputC.data(), inputC.size() * sizeof(unsigned char));
+			}
+		}
+		binImages.close();
+	}
+	else { // reading the binary file
+		int nbSamples;
+		binImages.read((char*)&nbSamples, sizeof(int));
+		std::cout << "importing " << nbSamples
+			<< " samples (from bin file)" << std::endl;
+		for (int i = 0; i < nbSamples; i++) {
+			std::vector<unsigned char> inputC(w*h);
+			binImages.read((char*)inputC.data(), w*h*sizeof(unsigned char));
+			std::vector<double> input(w*h);
+			for (int i = 0; i < inputC.size(); i++) { input[i] = inputC[i] / 255.0; }
+			samples.push_back({ input, input });
+		}
+		binImages.close();
 	}
 
 	// learning the images
-	int principalComponents = 8;
-	NetLearner learner(Network({ w*h, principalComponents, w*h }, 0.01));
+	int principalComponents = 3;
+	NetLearner learner(Network({ w*h, principalComponents, w*h }, 1));
 
 	while (true) {
 		learner.learn(samples, 1, 32, 1);
@@ -88,11 +115,12 @@ void faceTest(std::string folder) {
 		coeffsViz = 128 * coeffsViz + 128; coeffsViz.convertTo(coeffsViz, CV_8U);
 		cv::applyColorMap(coeffsViz, coeffsViz, cv::COLORMAP_BONE);
 		cv::resize(coeffsViz, coeffsViz, cv::Size(principalComponents * 4 * w, 4 * h), 0, 0, cv::INTER_NEAREST);
-		cv::imshow("coeffs", coeffsViz); cv::waitKey(16);
+		cv::imshow("coeffs", coeffsViz);
+		if (cv::waitKey(16) == 27) { break; }
 	}
 
-	// reconstructing faces from learnt components
-	/*for (Sample& s : samples) {
+#if 1 // reconstructing faces from learnt components
+	for (Sample& s : samples) {
 		auto out = learner.apply(s.input);
 		cv::Mat original(cv::Size(w, h), CV_64FC1);
 		std::copy(s.input.begin(), s.input.end(), (double*)original.data);
@@ -102,7 +130,8 @@ void faceTest(std::string folder) {
 		cv::resize(output, output, cv::Size(256,256));
 		cv::imshow("src", original); cv::imshow("dst", output);
 		cv::waitKey();
-	}*/
+	}
+#endif
 
 	// detecting faces in an image
 	{
@@ -110,13 +139,13 @@ void faceTest(std::string folder) {
 		cv::cvtColor(src, src, cv::COLOR_RGB2GRAY);
 		cv::imshow("face to detect", src); cv::waitKey(16);
 		src.convertTo(src, CV_64FC1); src = src / 255;
-		for (float scale = 1; src.size().width * scale > w && src.size().height > h; scale*=0.8) {
+		for (float scale = 1; src.size().width * scale > w && src.size().height > h; scale *= 0.8) {
 			cv::Mat srcSmall;
 			cv::resize(
 				src, srcSmall,
 				cv::Size(src.size().width*scale, src.size().height*scale),
 				0, 0, cv::INTER_AREA
-			);
+				);
 			int wI = srcSmall.size().width, hI = srcSmall.size().height;
 			cv::Mat dst(cv::Size(wI - w, hI - h), CV_64FC1);
 			double* dstP = (double*)dst.data;
@@ -132,7 +161,7 @@ void faceTest(std::string folder) {
 						double diff = input[k] - output[k];
 						error += abs(diff);
 					}
-					dstP[y*(wI-w) + x] = error;
+					dstP[y*(wI - w) + x] = error;
 				}
 			}
 			cv::normalize(dst, dst, -1, 1, cv::NORM_MINMAX);
@@ -171,16 +200,16 @@ void faceTest2(std::string folder) {
 			std::stringstream ss3;
 			ss3 << 1000 + 20 * (i - 1) + j;
 			std::string labelPath = folder + "labels/" +
-				+ "lab" + ss3.str().substr(1);
+				+"lab" + ss3.str().substr(1);
 			std::fstream label(labelPath, std::ios::in);
 			if (!label.is_open()) {
-				std:cerr << "can't read " << labelPath << std::endl;
+			std:cerr << "can't read " << labelPath << std::endl;
 				return;
 			}
 			int x, y, w, h;
 			label >> x >> y >> w >> h;
 
-			cv::rectangle(im, { x,y,w-x,h-y }, { 0,255,0 });
+			cv::rectangle(im, { x,y,w - x,h - y }, { 0,255,0 });
 
 			cv::imshow("k", im); cv::waitKey();
 		}
