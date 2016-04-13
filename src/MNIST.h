@@ -89,6 +89,32 @@ void learnMNIST(std::string imagesFileName, std::string labelsFileName) {
 		s.output[label] = 1.0;
 
 	}
+
+#if 0	// adding images randomly offseted
+	for (int i = 0; i < nbOfImages; i++) {
+
+		int offX = (1 - 2*double(rand()) / RAND_MAX) * nbColumns;
+		int offY = (1 - 2 * double(rand()) / RAND_MAX) * nbRows;
+		// the translation must be big enough
+		if (offX*offX + offY*offY < nbRows*nbColumns / 16) { continue; }
+
+		int j = rand() % nbOfImages;
+
+		std::vector<double>& original = samples[j].input;
+		std::vector<double> input(nbRows*nbColumns);
+		for (int y = 0; y < nbRows; y++) {
+			for (int x = 0; x < nbColumns; x++) {
+				if(
+					x+offX < 0 || x+offX >= nbColumns
+					|| y+offY < 0 || y+offY >= nbRows
+				) { continue; }
+				input[y*nbColumns + x] = original[(y + offY)*nbColumns + x + offX];
+			}
+		}
+		samples.push_back({ input, std::vector<double>(10,0) });
+	}
+#endif
+
 	// learning the dataset
 	std::random_shuffle(samples.begin(), samples.end());
 	int learnSize = (samples.size() * 80) / 100;
@@ -181,7 +207,10 @@ void learnMNIST(std::string imagesFileName, std::string labelsFileName) {
 				std::vector<double> classes = classifier.apply(input);
 				segP[y*(w - nbColumns) + x] = classes[3];
 				int bestClass = maxProb(classes);
-				results[y*(w - nbColumns) + x] = { bestClass, classes[bestClass] };
+				double bestProb = classes[bestClass];
+				classes[bestClass] = 0;
+				double secondBestProb = classes[maxProb(classes)];
+				results[y*(w - nbColumns) + x] = { bestClass, bestProb - secondBestProb };
 			}
 		}
 		segmentation.convertTo(segmentation, CV_8U, 255);
@@ -190,7 +219,11 @@ void learnMNIST(std::string imagesFileName, std::string labelsFileName) {
 
 		// finding the maximums in the result image
 		double bestConfidence;
-		cv::cvtColor(src, src, cv::COLOR_GRAY2RGB);
+		int i = 0;
+		std::vector<cv::Mat> channels = { cv::Mat(src.size(),CV_8UC1),
+			cv::Mat(src.size(),CV_8UC1), src };
+		channels[0] = 0; channels[1] = 0;
+		cv::merge( channels, src); // display the gray image in the red channel
 		do {
 			int bestX, bestY, bestClass;
 			bestConfidence = 0;
@@ -211,8 +244,8 @@ void learnMNIST(std::string imagesFileName, std::string labelsFileName) {
 
 			// Displaying the result
 			cv::rectangle(src, cv::Rect(bestX, bestY, nbColumns, nbRows), { 0,255,0 });
-			std::stringstream ss; ss << bestClass;
-				//<< " : " << int(100 * bestConfidence) << "%";
+			std::stringstream ss; ss << bestClass
+				<< " : " << int(100 * bestConfidence) << "%";
 			cv::putText(src, ss.str(), cv::Point(bestX - 12, bestY + nbRows - 1),
 				cv::FONT_HERSHEY_PLAIN, 1, { 0,255,0 });
 
@@ -222,7 +255,8 @@ void learnMNIST(std::string imagesFileName, std::string labelsFileName) {
 					results[y*(w - nbColumns) + x].confidence = 0;
 				}
 			}
-		} while (bestConfidence > 0.99); // threshold the results
+			i++;
+		} while (i < 8); // only display the best results
 
 		cv::imshow("Digits found", src); cv::waitKey(16);
 		cv::waitKey();
